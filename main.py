@@ -73,6 +73,15 @@ def main(gpu, args):
             download=True,
             transform=TransformsSimCLR(size=args.image_size),
         )
+    elif args.dataset == "VOC":
+        train_dataset = torchvision.datasets.VOCSegmentation(
+            args.dataset_dir,
+            year='2012',
+            image_set="train",
+            download=True,
+            transform=TransformsSimCLR(size=args.image_size),
+            target_transform=TransformsSimCLR(size=args.image_size).test_transform,
+        )
     else:
         raise NotImplementedError
 
@@ -89,7 +98,7 @@ def main(gpu, args):
         shuffle=(train_sampler is None),
         drop_last=True,
         num_workers=args.workers,
-        sampler=train_sampler,
+        #samplerz=train_sampler,
     )
 
     # initialize ResNet
