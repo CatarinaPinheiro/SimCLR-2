@@ -15,23 +15,23 @@ def inference(loader, simclr_model, device):
     feature_vector = []
     labels_vector = []
     for step, (x, y) in enumerate(loader):
-        x = x.to(device)
+        x = x.to(device)  # to cuda
 
         # get encoding
         with torch.no_grad():
             h, _, z, _ = simclr_model(x, x)
 
-        h = h.detach()
+        h = h.detach()  # not track gradients
 
         feature_vector.extend(h.cpu().detach().numpy())
         labels_vector.extend(y.numpy())
+
 
         if step % 20 == 0:
             print(f"Step [{step}/{len(loader)}]\t Computing features...")
 
     feature_vector = np.array(feature_vector)
     labels_vector = np.array(labels_vector)
-    print("Features shape {}".format(feature_vector.shape))
     return feature_vector, labels_vector
 
 
@@ -40,6 +40,7 @@ def get_features(simclr_model, train_loader, test_loader, device):
     test_X, test_y = inference(test_loader, simclr_model, device)
     return train_X, train_y, test_X, test_y
 
+#train_X feature_vector - result of encoder
 
 def create_data_loaders_from_arrays(X_train, y_train, X_test, y_test, batch_size):
     train = torch.utils.data.TensorDataset(
@@ -64,10 +65,13 @@ def train(args, loader, simclr_model, model, criterion, optimizer):
     for step, (x, y) in enumerate(loader):
         optimizer.zero_grad()
 
+
         x = x.to(args.device)
         y = y.to(args.device)
+        #print('y.shape: ', y.cpu().numpy().shape)
 
         output = model(x)
+        #print('out.shape: ', output.cpu().detach().numpy().shape)
         loss = criterion(output, y)
 
         predicted = output.argmax(1)
@@ -162,16 +166,16 @@ if __name__ == "__main__":
         num_workers=args.workers,
     )
 
-    encoder = get_resnet(args.resnet, pretrained=False)
+    encoder = get_resnet(args.resnet, pretrained=False)  # encoder network
     n_features = encoder.fc.in_features  # get dimensions of fc layer
 
     # load pre-trained model from checkpoint
     simclr_model = SimCLR(args, encoder, n_features)
     model_fp = os.path.join(
         args.model_path, "checkpoint_{}.tar".format(args.epoch_num)
-    )
+    )  # load from checkpoint
     simclr_model.load_state_dict(torch.load(model_fp, map_location=args.device.type))
-    simclr_model = simclr_model.to(args.device)
+    simclr_model = simclr_model.to(args.device)  # run cuda
     simclr_model.eval()
     
 

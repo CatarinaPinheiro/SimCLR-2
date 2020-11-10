@@ -1,6 +1,9 @@
 import torch.nn as nn
+import torch
+import os
 import torchvision
 from modules.resnet_hacks import modify_resnet_model
+from torchsummary import summary
 
 from .identity import Identity
 
@@ -14,10 +17,14 @@ class SimCLR(nn.Module):
         super(SimCLR, self).__init__()
 
         self.encoder = encoder
+        model_100 = os.path.join(args.model_path, "weights_100")
+        torch.save(self.encoder.state_dict(), model_100)
         self.n_features = n_features
 
         # Replace the fc layer with an Identity function
         self.encoder.fc = Identity()
+        encoder.cuda()
+        #summary(encoder,(3, 224, 224))
 
         # We use a MLP with one hidden layer to obtain z_i = g(h_i) = W(2)σ(W(1)h_i) where σ is a ReLU non-linearity.
         self.projector = nn.Sequential(
